@@ -2,7 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
+  formatEvolutionChain,
+  formatMoveDetail,
   formatPokemonOverview,
+  getEvolutionChain,
+  getMoveDetails,
   getPokemonOverview,
   PokemonOverview,
 } from "./pokemonHelper.js";
@@ -58,18 +62,78 @@ server.tool(
 );
 
 // getting move detail for specific move
-// server.tool("get_move_detail", "Get move detail for specific move", {
-//   move: z
-//     .string()
-//     .min(2)
-//     .describe(
-//       "Get move detail for specific move (e.g. 'hyper beam', 'razor leaf'"
-//     ),
-// },
-// async ({move}) => {
+server.tool(
+  "get_move_detail",
+  "Get move detail for specific move",
+  {
+    move: z
+      .string()
+      .min(2)
+      .describe(
+        "Get move detail for specific move (e.g. 'hyper beam', 'razor leaf')"
+      ),
+  },
+  async ({ move }) => {
+    const moveDetail = await getMoveDetails(move);
 
-// }
-// );
+    if (!moveDetail) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to retrieve move details for ${move}, please ensure it is a valid move.`,
+          },
+        ],
+      };
+    }
+
+    const formattedMoveDetail = formatMoveDetail(moveDetail);
+    return {
+      content: [
+        {
+          type: "text",
+          text: formattedMoveDetail,
+        },
+      ],
+    };
+  }
+);
+
+// getting evolution chain tool
+server.tool(
+  "get_evolution_chain",
+  "Get evolution chain for specific pokemon",
+  {
+    pokemonName: z
+      .string()
+      .min(2)
+      .describe("Array of Pokémon names, e.g. ['ditto', 'pikachu']"),
+  },
+  async ({ pokemonName }) => {
+    const evolutionChain = await getEvolutionChain(pokemonName);
+
+    if (!evolutionChain) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `No evolution chain for pokemon: ${pokemonName}`,
+          },
+        ],
+      };
+    }
+
+    const formattedEvolutionChain = formatEvolutionChain(evolutionChain);
+    return {
+      content: [
+        {
+          type: "text",
+          text: formattedEvolutionChain,
+        },
+      ],
+    };
+  }
+);
 
 // Start the server
 async function main() {

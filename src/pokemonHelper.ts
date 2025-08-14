@@ -61,25 +61,39 @@ export function formatPokemonOverview(
 
 export interface MoveDetail {
   properties: {
-    move?: Pokedex.Move;
+    name?: string | null | undefined;
+    pp?: Number | null;
+    type?: string | null | undefined;
     category?: string;
+    power?: number | null | undefined;
     damageClass?: string;
   };
+}
+
+//  Helper to normalize with hypens for pokedex api. example 'hyper beam' must be turned into 'hyper-beam'
+function normalizeMoveName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, "-");
 }
 
 export async function getMoveDetails(
   moveName: string
 ): Promise<MoveDetail | null> {
   try {
+    const normalizedMoveName = normalizeMoveName(moveName);
+    console.log(normalizeMoveName);
+
     const [move, category, dmgClass] = await Promise.all([
-      P.getMoveByName(moveName),
-      P.getMoveCategoryByName(moveName),
-      P.getMoveDamageClassByName(moveName),
+      P.getMoveByName(normalizedMoveName),
+      P.getMoveCategoryByName(normalizedMoveName),
+      P.getMoveDamageClassByName(normalizedMoveName),
     ]);
 
     const moveDetail: MoveDetail = {
       properties: {
-        move: move,
+        name: move.name,
+        pp: move.pp,
+        type: move.type.name,
+        power: move.power,
         category: category.name,
         damageClass: dmgClass.name,
       },
@@ -91,13 +105,28 @@ export async function getMoveDetails(
   }
 }
 
+export function formatMoveDetail(move: MoveDetail): string {
+  const props = move.properties;
+
+  const moveName = `Move Name: ${props.name || "Unknown"}`;
+  const power = `Power: ${props.power || "Unkown"}`;
+  const pp = `Base PP: ${props.pp || "Unknown"}`;
+  const type = `Type: ${props.type || "Unkownn"}`;
+  const moveCategory = `Category: ${props.category || "Unknown"}`;
+  const damageClass = `Damage Class: ${props.damageClass || "Unknown"}`;
+
+  return [moveName, power, pp, type, moveCategory, damageClass].join("\n");
+}
+
 interface EvolutionChain {
   properties: {
     chain?: string[];
   };
 }
 
-export async function getEvolutionChain(name: string) {
+export async function getEvolutionChain(
+  name: string
+): Promise<EvolutionChain | null> {
   try {
     const species = await P.getPokemonSpeciesByName(name);
     const evoUrl = species.evolution_chain.url;
